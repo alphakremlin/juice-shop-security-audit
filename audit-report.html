@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OWASP Juice Shop Security Audit — Ramone Scott</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; font-size: 13px; line-height: 1.6; }
+  .page { max-width: 900px; margin: 0 auto; background: #fff; }
+  .header { background: #0f172a; color: #fff; padding: 40px 48px 32px; }
+  .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .brand { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+  .auditor-name { font-size: 20px; font-weight: 700; color: #f1f5f9; }
+  .auditor-title { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+  .badge { background: #450a0a; color: #fca5a5; font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 6px 14px; border-radius: 4px; }
+  .report-title { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .report-meta { display: flex; gap: 32px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #1e293b; flex-wrap: wrap; }
+  .meta-item label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #475569; margin-bottom: 3px; }
+  .meta-item span { font-size: 13px; color: #cbd5e1; font-weight: 500; }
+  .score-bar { background: #0f172a; padding: 0 48px 28px; display: flex; gap: 16px; }
+  .score-card { flex: 1; background: #1e293b; border-radius: 8px; padding: 16px 20px; text-align: center; }
+  .score-card .score-num { font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+  .score-card .score-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
+  .score-critical { color: #f87171; } .score-high { color: #fb923c; } .score-medium { color: #fbbf24; } .score-pass { color: #34d399; }
+  .verdict-wrap { background: #0f172a; padding: 0 48px 32px; }
+  .verdict { background: #1e293b; border-left: 4px solid #f87171; border-radius: 0 8px 8px 0; padding: 16px 20px; display: flex; align-items: center; gap: 16px; }
+  .verdict-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 2px; }
+  .verdict-text { font-size: 18px; font-weight: 800; color: #f87171; }
+  .verdict-score { margin-left: auto; text-align: right; }
+  .verdict-score .big { font-size: 36px; font-weight: 900; color: #f1f5f9; line-height: 1; }
+  .verdict-score .small { font-size: 11px; color: #475569; }
+  .body { padding: 40px 48px; background: #0f172a; }
+  .section { margin-bottom: 32px; background: #1e293b; border-radius: 10px; overflow: hidden; }
+  .section-header { background: #0f172a; padding: 14px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; }
+  .section-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .icon-sec { background: #450a0a; color: #fca5a5; } .icon-bug { background: #7f1d1d; color: #fca5a5; } .icon-owasp { background: #1e3a5f; color: #93c5fd; }
+  .section-title { font-size: 13px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 1px; }
+  .section-body { padding: 24px; }
+  .bug-card { background: #0f172a; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; border-left: 3px solid #334155; }
+  .bug-card:last-child { margin-bottom: 0; }
+  .bug-card.critical { border-left-color: #ef4444; } .bug-card.high { border-left-color: #f97316; } .bug-card.medium { border-left-color: #eab308; }
+  .bug-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; gap: 12px; }
+  .bug-title { font-size: 13px; font-weight: 700; color: #f1f5f9; }
+  .severity-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 3px 8px; border-radius: 3px; white-space: nowrap; }
+  .sev-critical { background: #450a0a; color: #fca5a5; } .sev-high { background: #431407; color: #fed7aa; } .sev-medium { background: #422006; color: #fde68a; }
+  .bug-row { display: grid; grid-template-columns: 90px 1fr; gap: 4px 12px; margin-top: 6px; }
+  .bug-row-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; padding-top: 1px; }
+  .bug-row-value { font-size: 12px; color: #94a3b8; } .bug-row-value.fix { color: #86efac; }
+  code { background: #0f172a; border: 1px solid #334155; padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #7dd3fc; font-family: 'Consolas', monospace; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #0f172a; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 10px 14px; text-align: left; border-bottom: 1px solid #334155; }
+  td { padding: 10px 14px; border-bottom: 1px solid #1e293b; color: #94a3b8; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .status-pass { color: #34d399; font-weight: 600; } .status-fail { color: #f87171; font-weight: 600; } .status-warn { color: #fbbf24; font-weight: 600; }
+  .notice { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; font-size: 12px; color: #64748b; }
+  .notice strong { color: #94a3b8; }
+  .footer { background: #020617; padding: 24px 48px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; }
+  .footer-left { font-size: 11px; color: #334155; } .footer-right { font-size: 11px; color: #334155; text-align: right; }
+  .footer-name { color: #64748b; font-weight: 600; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .section { page-break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="brand">Security Assessment Report</div>
+        <div class="auditor-name">Ramone Scott</div>
+        <div class="auditor-title">QA Engineer &nbsp;·&nbsp; Security Testing &nbsp;·&nbsp; OWASP Top 10 &nbsp;·&nbsp; Web Application Security</div>
+      </div>
+      <div class="badge">Security</div>
+    </div>
+    <div class="report-title">OWASP Juice Shop — Security Assessment</div>
+    <div class="report-meta">
+      <div class="meta-item"><label>Site</label><span>juice-shop.herokuapp.com</span></div>
+      <div class="meta-item"><label>Date</label><span>26 April 2026</span></div>
+      <div class="meta-item"><label>Framework</label><span>OWASP Top 10 (2021)</span></div>
+      <div class="meta-item"><label>Stack</label><span>Node.js · Angular · SQLite</span></div>
+    </div>
+  </div>
+  <div class="score-bar">
+    <div class="score-card"><div class="score-num score-critical">4</div><div class="score-label">Critical</div></div>
+    <div class="score-card"><div class="score-num score-high">5</div><div class="score-label">High</div></div>
+    <div class="score-card"><div class="score-num score-medium">3</div><div class="score-label">Medium</div></div>
+    <div class="score-card"><div class="score-num" style="color:#fbbf24">2</div><div class="score-label">Warning</div></div>
+  </div>
+  <div class="verdict-wrap">
+    <div class="verdict">
+      <div><div class="verdict-label">Security Status</div><div class="verdict-text">NOT PRODUCTION READY</div></div>
+      <div class="verdict-score"><div class="big">1<span style="font-size:18px;color:#475569">/10</span></div><div class="small">Security Score</div></div>
+    </div>
+  </div>
+  <div class="body">
+
+    <div class="section">
+      <div class="section-header"><div class="section-icon icon-owasp">📋</div><div class="section-title">OWASP Top 10 Coverage</div></div>
+      <div class="section-body">
+        <div class="notice"><strong>Note:</strong> OWASP Juice Shop is intentionally vulnerable — built for security training. All findings below are real, reproducible vulnerabilities that represent issues found in real production applications.</div>
+        <table>
+          <thead><tr><th>OWASP Category</th><th>Finding</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>A01 Broken Access Control</td><td>IDOR on user profiles and order history</td><td><span class="status-fail">FAIL</span></td></tr>
+            <tr><td>A02 Cryptographic Failures</td><td>Weak JWT signing — token forgery possible</td><td><span class="status-fail">FAIL</span></td></tr>
+            <tr><td>A03 Injection</td><td>SQL injection + Stored XSS</td><td><span class="status-fail">FAIL</span></td></tr>
+            <tr><td>A04 Insecure Design</td><td>Predictable sequential order IDs</td><td><span class="status-fail">FAIL</span></td></tr>
+            <tr><td>A05 Security Misconfiguration</td><td>Admin panel via predictable URL, missing headers</td><td><span class="status-fail">FAIL</span></td></tr>
+            <tr><td>A06 Vulnerable Components</td><td>Outdated npm packages with known CVEs</td><td><span class="status-fail">FAIL</span></td></tr>
+            <tr><td>A07 Auth Failures</td><td>SQLi login bypass — admin access without credentials</td><td><span class="status-fail">FAIL</span></td></tr>
+            <tr><td>A08 Software Integrity</td><td>Unverified — no build integrity checks observed</td><td><span class="status-warn">WARN</span></td></tr>
+            <tr><td>A09 Logging & Monitoring</td><td>No rate limiting, no alerting on failed auth</td><td><span class="status-fail">FAIL</span></td></tr>
+            <tr><td>A10 SSRF</td><td>Unverified in scope of this audit</td><td><span class="status-warn">WARN</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-icon icon-sec">🔴</div><div class="section-title">Critical Security Findings</div></div>
+      <div class="section-body">
+        <div class="bug-card critical">
+          <div class="bug-header"><div class="bug-title">Finding #1 — SQL Injection on Search Endpoint</div><span class="severity-badge sev-critical">Critical</span></div>
+          <div class="bug-row"><span class="bug-row-label">Endpoint</span><span class="bug-row-value"><code>GET /rest/products/search?q=apple'</code></span></div>
+          <div class="bug-row"><span class="bug-row-label">OWASP</span><span class="bug-row-value">A03:2021 — Injection</span></div>
+          <div class="bug-row"><span class="bug-row-label">Detail</span><span class="bug-row-value">Query parameter concatenated directly into SQLite query. Single quote breaks the query. Full database readable via <code>' OR 1=1--</code>. UNION-based data exfiltration possible.</span></div>
+          <div class="bug-row"><span class="bug-row-label">Fix</span><span class="bug-row-value fix">Use parameterised queries / prepared statements. Never concatenate user input into SQL strings.</span></div>
+        </div>
+        <div class="bug-card critical">
+          <div class="bug-header"><div class="bug-title">Finding #2 — Authentication Bypass via SQL Injection</div><span class="severity-badge sev-critical">Critical</span></div>
+          <div class="bug-row"><span class="bug-row-label">Endpoint</span><span class="bug-row-value"><code>POST /rest/user/login</code> with <code>{"email":"' OR 1=1--"}</code></span></div>
+          <div class="bug-row"><span class="bug-row-label">OWASP</span><span class="bug-row-value">A07:2021 — Identification and Authentication Failures</span></div>
+          <div class="bug-row"><span class="bug-row-label">Detail</span><span class="bug-row-value">Classic OR 1=1 comment bypass authenticates as admin without knowing any credentials. Returns valid JWT token for the admin account.</span></div>
+          <div class="bug-row"><span class="bug-row-label">Fix</span><span class="bug-row-value fix">Parameterise the login query. Implement account lockout after 5 failed attempts. Add MFA for admin accounts.</span></div>
+        </div>
+        <div class="bug-card critical">
+          <div class="bug-header"><div class="bug-title">Finding #3 — Broken Access Control (IDOR)</div><span class="severity-badge sev-critical">Critical</span></div>
+          <div class="bug-row"><span class="bug-row-label">Endpoint</span><span class="bug-row-value"><code>PUT /api/Users/:id</code></span></div>
+          <div class="bug-row"><span class="bug-row-label">OWASP</span><span class="bug-row-value">A01:2021 — Broken Access Control</span></div>
+          <div class="bug-row"><span class="bug-row-label">Detail</span><span class="bug-row-value">Authenticated users can modify any other user's profile by changing the :id in the URL. Server verifies JWT presence but not JWT ownership vs resource owner.</span></div>
+          <div class="bug-row"><span class="bug-row-label">Fix</span><span class="bug-row-value fix">Enforce server-side ownership check. JWT subject must match resource owner ID on every write operation.</span></div>
+        </div>
+        <div class="bug-card critical">
+          <div class="bug-header"><div class="bug-title">Finding #4 — Stored XSS in Product Content</div><span class="severity-badge sev-critical">Critical</span></div>
+          <div class="bug-row"><span class="bug-row-label">Endpoint</span><span class="bug-row-value"><code>POST /rest/products/:id/reviews</code></span></div>
+          <div class="bug-row"><span class="bug-row-label">OWASP</span><span class="bug-row-value">A03:2021 — Injection (XSS)</span></div>
+          <div class="bug-row"><span class="bug-row-label">Detail</span><span class="bug-row-value">Review text accepts and renders raw HTML. Payload <code>&lt;iframe src="javascript:alert('XSS')"&gt;</code> executes in all users' browsers who view the product.</span></div>
+          <div class="bug-row"><span class="bug-row-label">Fix</span><span class="bug-row-value fix">Sanitise all user-supplied HTML server-side with DOMPurify or equivalent. Never render raw user input as HTML.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-icon icon-bug">🐛</div><div class="section-title">High Severity Findings</div></div>
+      <div class="section-body">
+        <div class="bug-card high">
+          <div class="bug-header"><div class="bug-title">Finding #5 — Weak JWT Signing</div><span class="severity-badge sev-high">High</span></div>
+          <div class="bug-row"><span class="bug-row-label">OWASP</span><span class="bug-row-value">A02:2021 — Cryptographic Failures</span></div>
+          <div class="bug-row"><span class="bug-row-label">Detail</span><span class="bug-row-value">JWTs signed with a weak secret or "none" algorithm in some versions, allowing token forgery. JWT payload is base64-encoded but NOT encrypted — email, ID, and role visible to anyone who intercepts the token.</span></div>
+          <div class="bug-row"><span class="bug-row-label">Fix</span><span class="bug-row-value fix">Use RS256 asymmetric JWT signing. Enforce minimum secret length. Explicitly reject "none" algorithm.</span></div>
+        </div>
+        <div class="bug-card high">
+          <div class="bug-header"><div class="bug-title">Finding #6 — Stack Traces Returned in Error Responses</div><span class="severity-badge sev-high">High</span></div>
+          <div class="bug-row"><span class="bug-row-label">Detail</span><span class="bug-row-value">Unhandled server errors return full Node.js stack traces in the HTTP response body. Attackers can read file paths, function names, and framework versions.</span></div>
+          <div class="bug-row"><span class="bug-row-label">Fix</span><span class="bug-row-value fix">Return generic error messages to clients. Log full stack traces server-side only.</span></div>
+        </div>
+        <div class="bug-card high">
+          <div class="bug-header"><div class="bug-title">Finding #7 — All Security Headers Missing</div><span class="severity-badge sev-high">High</span></div>
+          <div class="bug-row"><span class="bug-row-label">Missing</span><span class="bug-row-value"><code>Content-Security-Policy</code>, <code>X-Frame-Options</code>, <code>X-Content-Type-Options</code>, <code>Strict-Transport-Security</code>, <code>Permissions-Policy</code></span></div>
+          <div class="bug-row"><span class="bug-row-label">OWASP</span><span class="bug-row-value">A05:2021 — Security Misconfiguration</span></div>
+          <div class="bug-row"><span class="bug-row-label">Fix</span><span class="bug-row-value fix">Add <code>helmet.js</code> middleware to Node.js/Express. Sets all standard security headers automatically.</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footer">
+    <div class="footer-left"><div class="footer-name">Ramone Scott — QA Engineer</div><div>Available for freelance security audits · 48–72hr turnaround · Jamaica</div></div>
+    <div class="footer-right"><div>OWASP Top 10 (2021) Framework</div><div>© 2026 Ramone Scott</div></div>
+  </div>
+</div>
+</body>
+</html>
